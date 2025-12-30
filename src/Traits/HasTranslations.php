@@ -247,9 +247,9 @@ trait HasTranslations
     public function translateTo(array $data, ?string $locale = null): self
     {
         if ($locale === null && count($data) > 0) {
-            // Check if first key is a locale (2 letters)
-            $firstKey = array_key_first($data);
-            if (is_string($firstKey) && strlen($firstKey) <= 5) {
+            // If the first element is an array, we assume it's a multi-locale format: ['en' => [...]]
+            $firstValue = reset($data);
+            if (is_array($firstValue)) {
                 return $this->fillTranslations($data);
             }
         }
@@ -260,7 +260,11 @@ trait HasTranslations
             $this->pendingTranslations = [];
         }
 
-        $this->pendingTranslations[$locale] = $data;
+        // Merge existing pending translations for this locale to avoid overwriting during Mass Assignment
+        $this->pendingTranslations[$locale] = array_merge(
+            $this->pendingTranslations[$locale] ?? [],
+            $data
+        );
 
         return $this;
     }
