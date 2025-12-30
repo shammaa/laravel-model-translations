@@ -116,6 +116,11 @@ trait HasTranslations
     {
         $locale = $locale ?: app()->getLocale();
         
+        // Check pending translations first (useful during saving event or before save)
+        if (isset($this->pendingTranslations[$locale][$key])) {
+            return $this->pendingTranslations[$locale][$key];
+        }
+
         $translation = $this->translations
             ->where($this->getLocaleColumn(), $locale)
             ->first();
@@ -128,6 +133,11 @@ trait HasTranslations
         if (config('model-translations.fallback_enabled', true)) {
             $fallback = config('model-translations.default_locale', config('app.fallback_locale', 'en'));
             if ($locale !== $fallback) {
+                // Also check pending for fallback locale
+                if (isset($this->pendingTranslations[$fallback][$key])) {
+                    return $this->pendingTranslations[$fallback][$key];
+                }
+
                 $translation = $this->translations
                     ->where($this->getLocaleColumn(), $fallback)
                     ->first();
@@ -137,6 +147,14 @@ trait HasTranslations
         }
 
         return null;
+    }
+
+    /**
+     * Get pending translation (for compatibility with slug packages)
+     */
+    public function getPendingTranslation(string $key, string $locale): ?string
+    {
+        return $this->pendingTranslations[$locale][$key] ?? null;
     }
 
     /**
