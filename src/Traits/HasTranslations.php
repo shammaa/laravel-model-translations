@@ -264,6 +264,16 @@ trait HasTranslations
      */
     public function translateTo(array $data, ?string $locale = null): self
     {
+        // Auto-decode JSON strings if they are passed as values
+        foreach ($data as $key => $value) {
+            if (is_string($value) && (str_starts_with($value, '{') || str_starts_with($value, '['))) {
+                $decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $data[$key] = $decoded;
+                }
+            }
+        }
+
         if ($locale === null && count($data) > 0) {
             $firstKey = (string) key($data);
             $firstValue = reset($data);
