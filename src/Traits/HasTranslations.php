@@ -338,6 +338,19 @@ trait HasTranslations
         }
 
         foreach ($this->pendingTranslations as $locale => $attributes) {
+            // Skip locales where all translatable fields are empty
+            $hasContent = false;
+            foreach ($this->getTranslatableAttributes() as $field) {
+                if (isset($attributes[$field]) && !empty($attributes[$field])) {
+                    $hasContent = true;
+                    break;
+                }
+            }
+
+            if (!$hasContent) {
+                continue; // Skip this locale entirely
+            }
+
             $this->translations()->updateOrCreate(
                 [$this->getLocaleColumn() => $locale],
                 $attributes
