@@ -265,9 +265,28 @@ trait HasTranslations
     public function translateTo(array $data, ?string $locale = null): self
     {
         if ($locale === null && count($data) > 0) {
-            // If the first element is an array, we assume it's a multi-locale format: ['en' => [...]]
+            $firstKey = (string) key($data);
             $firstValue = reset($data);
+
             if (is_array($firstValue)) {
+                // Determine if this is attribute-first: ['name' => ['ar' => '...', 'en' => '...']]
+                // or locale-first: ['ar' => ['name' => '...'], 'en' => [...]]
+                if ($this->isTranslationAttribute($firstKey)) {
+                    foreach ($data as $attribute => $translations) {
+                        if (is_array($translations)) {
+                            foreach ($translations as $loc => $val) {
+                                $this->pendingTranslations[$loc][$attribute] = $val;
+                            }
+                        } else {
+                            // If a single value is mixed in, use current locale
+                            $loc = app()->getLocale();
+                            $this->pendingTranslations[$loc][$attribute] = $translations;
+                        }
+                    }
+                    return $this;
+                }
+
+                // Standard locale-first format: ['ar' => ['name' => '...'], 'en' => [...]]
                 return $this->fillTranslations($data);
             }
         }

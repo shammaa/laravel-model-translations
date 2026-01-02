@@ -88,10 +88,11 @@ $article->translateTo([
 ```
 
 ### 3. Bulk Multi-locale Array
-Handle multiple languages in a single call. The library intelligently parses the nested arrays.
+Handle multiple languages in a single call. The library intelligently parses the nested arrays in two different formats.
 
 **Best for:** Admin dashboards with multi-language tabs.
 
+**Format A: Locale-first (Traditional)**
 ```php
 $article->translateTo([
     'ar' => [
@@ -101,6 +102,21 @@ $article->translateTo([
     'en' => [
         'title' => 'English Title',
         'content' => 'English content'
+    ]
+])->save();
+```
+
+**Format B: Attribute-first (Smart)**
+This format is particularly useful when working with slug generators or specialized input fields.
+```php
+$article->translateTo([
+    'title' => [
+        'ar' => 'عنوان عربي',
+        'en' => 'English Title'
+    ],
+    'content' => [
+        'ar' => 'محتوى عربي',
+        'en' => 'English content'
     ]
 ])->save();
 ```
