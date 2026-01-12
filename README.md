@@ -163,6 +163,38 @@ $articles = Article::orderByTranslation('title', 'asc')->get();
 $missingAr = Article::emptyTranslation('ar')->get();
 ```
 
+#### 5. Find by Translated Slug 🆕
+When your `slug` is stored in the translations table, use these methods to find models easily:
+
+```php
+// Find article by slug (searches all locales)
+$article = Article::findByTranslatedSlug('my-article-slug');
+
+// Find by slug in specific locale
+$article = Article::findByTranslatedSlug('my-article-slug', 'ar');
+
+// Find or throw 404
+$article = Article::findByTranslatedSlugOrFail('my-article-slug');
+
+// Use as a query scope
+$articles = Article::whereTranslatedSlug('my-article-slug')->with('author')->first();
+
+// If your slug column has a different name
+$article = Article::findByTranslatedSlug('my-slug', null, 'url_slug');
+```
+
+**Example in Controller:**
+```php
+public function show($locale, $slug)
+{
+    app()->setLocale($locale);
+    
+    $article = Article::findByTranslatedSlugOrFail($slug, $locale);
+    
+    return view('articles.show', compact('article'));
+}
+```
+
 ## Advanced Configuration
 
 If your model or table names don't follow the defaults, you can override them:

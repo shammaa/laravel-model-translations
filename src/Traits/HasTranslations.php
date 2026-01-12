@@ -240,6 +240,55 @@ trait HasTranslations
     }
 
     /**
+     * Scope: Find by slug in translations table.
+     * Searches in all locales by default, or in a specific locale if provided.
+     * 
+     * Usage:
+     *   Article::whereTranslatedSlug('my-article-slug')->first();
+     *   Article::whereTranslatedSlug('my-article-slug', 'ar')->first();
+     */
+    public function scopeWhereTranslatedSlug(Builder $query, string $slug, ?string $locale = null, string $slugColumn = 'slug'): Builder
+    {
+        return $query->whereHas('translations', function ($q) use ($slug, $locale, $slugColumn) {
+            $q->where($slugColumn, $slug);
+            
+            if ($locale !== null) {
+                $q->where($this->getLocaleColumn(), $locale);
+            }
+        });
+    }
+
+    /**
+     * Static helper: Find model by translated slug.
+     * Returns first matching model or null.
+     * 
+     * Usage:
+     *   $article = Article::findByTranslatedSlug('my-article-slug');
+     *   $article = Article::findByTranslatedSlug('my-article-slug', 'ar');
+     */
+    public static function findByTranslatedSlug(string $slug, ?string $locale = null, string $slugColumn = 'slug'): ?static
+    {
+        return static::whereTranslatedSlug($slug, $locale, $slugColumn)->first();
+    }
+
+    /**
+     * Static helper: Find model by translated slug or fail with 404.
+     * 
+     * Usage:
+     *   $article = Article::findByTranslatedSlugOrFail('my-article-slug');
+     */
+    public static function findByTranslatedSlugOrFail(string $slug, ?string $locale = null, string $slugColumn = 'slug'): static
+    {
+        $model = static::findByTranslatedSlug($slug, $locale, $slugColumn);
+        
+        if (!$model) {
+            abort(404);
+        }
+        
+        return $model;
+    }
+
+    /**
      * Check if a translation exists for a specific locale.
      */
     public function hasTranslation(?string $locale = null): bool
