@@ -68,6 +68,38 @@ trait HasTranslations
     }
 
     /**
+     * Convert the model instance to an array.
+     * Overridden to flatten translations and hide the relationship for a clean JSON.
+     */
+    public function toArray(): array
+    {
+        $array = parent::toArray();
+        
+        // Remove the translations relationship from the JSON output
+        // to provide a clean, flattened structure as requested by the client.
+        if (isset($array['translations'])) {
+            unset($array['translations']);
+        }
+
+        return $array;
+    }
+
+    /**
+     * Convert the model's attributes to an array.
+     * Injects translatable fields into the main attributes array.
+     */
+    public function attributesToArray(): array
+    {
+        $attributes = parent::attributesToArray();
+        
+        foreach ($this->getTranslatableAttributes() as $field) {
+            $attributes[$field] = $this->getTranslationValue($field);
+        }
+        
+        return $attributes;
+    }
+
+    /**
      * Magic setter for translatable attributes.
      */
     public function __set($key, $value)
@@ -121,6 +153,12 @@ trait HasTranslations
             return $this->pendingTranslations[$locale][$key];
         }
 
+        // Performance Optimization: Check if already loaded via Join (current attributes)
+        // This prevents extra queries when using withTranslation() scope.
+        if ($locale === app()->getLocale() && array_key_exists($key, $this->attributes)) {
+            return $this->attributes[$key];
+        }
+
         $translation = $this->translations
             ->where($this->getLocaleColumn(), $locale)
             ->first();
@@ -136,6 +174,11 @@ trait HasTranslations
                 // Also check pending for fallback locale
                 if (isset($this->pendingTranslations[$fallback][$key])) {
                     return $this->pendingTranslations[$fallback][$key];
+                }
+
+                // Check attributes for fallback as well (if app locale is fallback)
+                if ($fallback === app()->getLocale() && array_key_exists($key, $this->attributes)) {
+                    return $this->attributes[$key];
                 }
 
                 $translation = $this->translations
@@ -175,10 +218,22 @@ trait HasTranslations
         $mainTable = $this->getTable();
         $foreignKey = $this->getTranslationRelationKey();
 
-        return $query->leftJoin($translationTable, function ($join) use ($translationTable, $mainTable, $foreignKey, $locale) {
+        $query->leftJoin($translationTable, function ($join) use ($translationTable, $mainTable, $foreignKey, $locale) {
             $join->on("{$mainTable}.id", '=', "{$translationTable}.{$foreignKey}")
                  ->where("{$translationTable}.{$this->getLocaleColumn()}", '=', $locale);
-        })->select("{$mainTable}.*");
+        });
+
+        // Ensure main table columns are selected
+        if (!$query->getQuery()->columns) {
+            $query->select("{$mainTable}.*");
+        }
+
+        // Automatically select translatable columns for a flat result set
+        foreach ($this->getTranslatableAttributes() as $attribute) {
+            $query->addSelect("{$translationTable}.{$attribute}");
+        }
+
+        return $query;
     }
 
     /**
